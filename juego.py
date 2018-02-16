@@ -7,6 +7,7 @@ import random
 
 
 # Constantes
+# --------------------------------------------------------------------- 
 
 ##Colores
 BLANCO = (255,255,255)
@@ -17,35 +18,37 @@ VERDE = (0,150,0)
 ##Tamaño pantalla
 ANCHURA_PANTALLA = 800
 ALTURA_PANTALLA = 600
-
-FPS = 15
-
-FUENTE = "Comfortaa-Regular.ttf"
-
 pantalla = pygame.display.set_mode((ANCHURA_PANTALLA,ALTURA_PANTALLA)) #Se crea el objeto pantalla con el tamaño en una tupla
 
-pygame.display.set_caption("Juego de la serpiente") #Titulo del juego
+#Titulo del juego
+pygame.display.set_caption("Juego de la serpiente")
 
+#Reloj
 reloj = pygame.time.Clock() #Objeto reloj para definir los FPS
+FPS = 15
 
+#Fuente
 pygame.font.init()
+FUENTE = "Comfortaa-Regular.ttf"
 font = pygame.font.Font(FUENTE,25)
 
-medida_bloque = 20
-medida_manzana = 30
-
+#Serpiente
+img = pygame.image.load("snake1.png") #Cargamos la foto para la cabeza de la serpiente
 cabeza_x_cambio = 10
 cabeza_y_cambio = 0
-
-img = pygame.image.load("snake1.png") #Cargamos la foto para la cabeza de la serpiente
-
+medida_bloque = 20
 direccion = "derecha"
+
+#Manzana
+medida_manzana = 30
+manzana = pygame.image.load("manzana.png")
 
 # --------------------------------------------------------------------- 
 # Clases
 
 # ---------------------------------------------------------------------
 # Funciones generales
+# --------------------------------------------------------------------- 
 def objetos_texto(msg,color):
 	superficie_texto = font.render(msg, True, color)
 	return superficie_texto, superficie_texto.get_rect() 
@@ -74,6 +77,26 @@ def perder_partida(salir, perder):
 		
 	return salir, perder
 
+def pausar(pausa):
+	while pausa == True:
+		pantalla.fill(BLANCO)
+		mensaje_por_pantalla("Menú de pausa: ", NEGRO)
+		mensaje_por_pantalla("Salir --> Q ", NEGRO)
+		mensaje_por_pantalla("Reanudar --> E ", NEGRO)
+		mensaje_por_pantalla("Reiniciar partida --> R ", NEGRO)
+		pygame.display.update()
+		
+		for event in pygame.event.get():
+			if event.type == pygame.QUIT:
+				salir = True
+				perder = False
+			if event.key == pygame.K_q:
+				salir = True
+				perder = False
+			if event.key == pygame.K_r:
+				main()
+			if event.key == pygame.K_e:
+				pausa = False
 # ---------------------------------------------------------------------
 # Funciones del juego
 # ---------------------------------------------------------------------
@@ -106,6 +129,10 @@ def movimiento_serpiente():
 	for event in pygame.event.get(): #Eventos que hay https://www.pygame.org/docs/ref/event.html
 		if event.type == pygame.QUIT: #Salir cuando se le da al boton X de la pantalla
 			salir = True
+		
+		if event.type == pygame.K_ESCAPE:
+			pausar(pausa = True)
+			
 		if event.type == pygame.KEYDOWN: #Si se presiona una tecla
 			if event.key == pygame.K_LEFT: #Si se presiona la flecha izquierda
 				direccion == "izquierda"
@@ -123,6 +150,7 @@ def movimiento_serpiente():
 				direccion == "abajo"
 				cabeza_y_cambio += medida_bloque
 				cabeza_x_cambio = 0
+			
 
 # ---------------------------------------------------------------------
 # Programa Principal
@@ -132,6 +160,7 @@ def main():
 	
 	salir = False
 	perder = False
+	pausa = False
 	
 	#Posicion inicial del jugador
 	cabeza_x = ANCHURA_PANTALLA/2
@@ -143,20 +172,22 @@ def main():
 	manzana_x = round(random.randrange(0,ANCHURA_PANTALLA-medida_bloque)) #Generar la manzana aleatoriamente teniendo en cuenta el tamaño del bloque
 	manzana_y = round(random.randrange(0,ALTURA_PANTALLA-medida_bloque)) #Si se redondea para que sea multiplo de 10 se puede conseguir que la serpiente y la manzana se crucen bien
 
-	while not salir: #Mientras salir no sea True se ejecuta
-		
+	while not salir:
 		salir,perder = perder_partida(salir, perder)
 		
 		movimiento_serpiente()
 		
-		if cabeza_x >= ANCHURA_PANTALLA or cabeza_x < 0 or cabeza_y >= ALTURA_PANTALLA or cabeza_y < 0: #Si el cuadrado llega a alguno de los bordes se cierra el juego
+		pausar(pausa) #No va
+		
+		pantalla.fill(NEGRO) #Llena el fondo del color pasado
+		pantalla.blit(manzana,(manzana_x, manzana_y)) #Imprimrir imagen de manzana
+		#pygame.draw.rect(pantalla, ROJO, [, medida_manzana, medida_manzana]) #Imprimir manzana
+		
+		if cabeza_x >= ANCHURA_PANTALLA or cabeza_x < 0 or cabeza_y >= ALTURA_PANTALLA or cabeza_y < 0: #Si el cuadrado llega a alguno de los bordes pierdes
 			perder = True
 	
 		cabeza_x += cabeza_x_cambio #Cada vuelta al for sumara el cambio de posicion a cabeza_x asi se puede mantener la tecla pulsada y se mueve
 		cabeza_y += cabeza_y_cambio
-		
-		pantalla.fill(NEGRO) #Llena el fondo del color pasado
-		pygame.draw.rect(pantalla, ROJO, [manzana_x, manzana_y, medida_manzana, medida_manzana]) #Imprimir manzana
 		
 		cabeza_serpiente = []
 		cabeza_serpiente.append(cabeza_x)#Se mete en la lista la posicion de la cabeza x y la y
@@ -172,15 +203,14 @@ def main():
 
 		serpiente(medida_bloque, lista_serpiente)
 		
-		pygame.display.update() #Actualizar pantalla
-		
 		#Mirar colisiones contra la manzana
 		if cabeza_x + medida_bloque > manzana_x and cabeza_x < manzana_x + medida_manzana:
 			if cabeza_y + medida_bloque > manzana_y and cabeza_y < manzana_y + medida_manzana:
 				manzana_x = round(random.randrange(0,ANCHURA_PANTALLA-medida_bloque))
 				manzana_y = round(random.randrange(0,ALTURA_PANTALLA-medida_bloque))
 				longitud_serpiente +=1
-
+				
+		pygame.display.update() #Actualizar pantalla
 		reloj.tick(FPS) #FPS para cambiar la velocidad del juego mejor no tocar FPS sino fuerzas que el bucle for se ejecute muchas veces por segundo y puede haber problema de rendimiento
 	
 	pygame.quit()
