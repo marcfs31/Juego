@@ -3,36 +3,57 @@
 
 # Módulos
 import pygame
-import time, random
+import random
 
 
 # Constantes
-#Tuplas con colores
+
+##Colores
 BLANCO = (255,255,255)
 NEGRO = (0,0,0)
 ROJO = (255,0,0)
 VERDE = (0,150,0)
 
+##Tamaño pantalla
 ANCHURA_PANTALLA = 800
 ALTURA_PANTALLA = 600
 
-FPS = 30
+FPS = 15
+
 FUENTE = "Comfortaa-Regular.ttf"
 
 pantalla = pygame.display.set_mode((ANCHURA_PANTALLA,ALTURA_PANTALLA)) #Se crea el objeto pantalla con el tamaño en una tupla
 
 pygame.display.set_caption("Juego de la serpiente") #Titulo del juego
 
+reloj = pygame.time.Clock() #Objeto reloj para definir los FPS
+
+pygame.font.init()
+font = pygame.font.Font(FUENTE,25)
+
+medida_bloque = 20
+medida_manzana = 30
+
+cabeza_x_cambio = 10
+cabeza_y_cambio = 0
+
+img = pygame.image.load("snake1.png") #Cargamos la foto para la cabeza de la serpiente
+
+direccion = "derecha"
+
 # --------------------------------------------------------------------- 
 # Clases
 
 # ---------------------------------------------------------------------
 # Funciones generales
+def objetos_texto(msg,color):
+	superficie_texto = font.render(msg, True, color)
+	return superficie_texto, superficie_texto.get_rect() 
+
 def mensaje_por_pantalla(msg,color): #Funcion para generar mensajes
-	pygame.font.init() #Iniciamos font
-	font = pygame.font.SysFont(None , 25) #Creamos el objeto fuente con la fuente por defecto y el tamaño 25
-	texto = font.render(msg, True, color)
-	pantalla.blit(texto, [ANCHURA_PANTALLA/2, ALTURA_PANTALLA/2])
+	superficie_texto, rectangulo_texto = objetos_texto(msg,color)
+	rectangulo_texto.center = (ANCHURA_PANTALLA/2), (ALTURA_PANTALLA/2)
+	pantalla.blit(superficie_texto, rectangulo_texto)
 
 def perder_partida(salir, perder):
 	while perder == True:
@@ -41,6 +62,9 @@ def perder_partida(salir, perder):
 		pygame.display.update()
 		
 		for event in pygame.event.get():
+			if event.type == pygame.QUIT:
+				salir = True
+				perder = False
 			if event.type == pygame.KEYDOWN:
 				if event.key == pygame.K_q:
 					salir = True
@@ -54,12 +78,58 @@ def perder_partida(salir, perder):
 # Funciones del juego
 # ---------------------------------------------------------------------
 def serpiente(medida_bloque, lista_serpiente):
-	for XY in lista_serpiente:
+	
+	#Rotar la cabeza de la serpiente
+	if direccion == "derecha":
+		cabeza = pygame.transform.rotate(img, 270)
+		
+	if direccion == "izquierda":
+		cabeza = pygame.transform.rotate(img, 90)
+		
+	if direccion == "abajo":
+		cabeza = pygame.transform.rotate(img, 180)
+		
+	if direccion == "arriba":
+		cabeza = img
+	
+	pantalla.blit(cabeza, (lista_serpiente[-1][0], lista_serpiente[-1][1]))
+	
+	for XY in lista_serpiente[:-1]:
 		pygame.draw.rect(pantalla, VERDE, [XY[0],XY[1],medida_bloque,medida_bloque]) #Imprimir serpiente
+		
+
+def movimiento_serpiente():
+	global cabeza_x_cambio
+	global cabeza_y_cambio
+	#Problema que al reiniciar partida la serpiente se auto mueve es algo del cabeza_xy_cambio que no se reinicia
+	
+	for event in pygame.event.get(): #Eventos que hay https://www.pygame.org/docs/ref/event.html
+		if event.type == pygame.QUIT: #Salir cuando se le da al boton X de la pantalla
+			salir = True
+		if event.type == pygame.KEYDOWN: #Si se presiona una tecla
+			if event.key == pygame.K_LEFT: #Si se presiona la flecha izquierda
+				direccion == "izquierda"
+				cabeza_x_cambio -= medida_bloque #La posición de la cabeza_x_cambio se reduce en 10
+				cabeza_y_cambio = 0 #Evitar que al cambiar la x la y no
+			elif event.key == pygame.K_RIGHT:
+				direccion == "derecha"
+				cabeza_x_cambio += medida_bloque
+				cabeza_y_cambio = 0
+			elif event.key == pygame.K_UP:
+				direccion == "arriba"
+				cabeza_y_cambio -= medida_bloque
+				cabeza_x_cambio = 0
+			elif event.key == pygame.K_DOWN:
+				direccion == "abajo"
+				cabeza_y_cambio += medida_bloque
+				cabeza_x_cambio = 0
+
 # ---------------------------------------------------------------------
 # Programa Principal
 # ---------------------------------------------------------------------
 def main(): 
+	global direccion
+	
 	salir = False
 	perder = False
 	
@@ -67,50 +137,26 @@ def main():
 	cabeza_x = ANCHURA_PANTALLA/2
 	cabeza_y = ALTURA_PANTALLA/2
 	
-	cabeza_x_cambio = 0
-	cabeza_y_cambio = 0
-	
-	medida_bloque = 10
-	
 	lista_serpiente = []
 	longitud_serpiente = 1
-	
-	manzanaX = round(random.randrange(0,ANCHURA_PANTALLA-medida_bloque)/10.0)*10.0 #Generar la manzana aleatoriamente teniendo en cuenta el tamaño del bloque
-	manzanaY = round(random.randrange(0,ALTURA_PANTALLA-medida_bloque)/10.0)*10.0 #Si se redondea para que sea multiplo de 10 se puede conseguir que la serpiente y la manzana se crucen bien
-	
-	reloj = pygame.time.Clock() #Objeto reloj para definir los FPS
+
+	manzana_x = round(random.randrange(0,ANCHURA_PANTALLA-medida_bloque)) #Generar la manzana aleatoriamente teniendo en cuenta el tamaño del bloque
+	manzana_y = round(random.randrange(0,ALTURA_PANTALLA-medida_bloque)) #Si se redondea para que sea multiplo de 10 se puede conseguir que la serpiente y la manzana se crucen bien
 
 	while not salir: #Mientras salir no sea True se ejecuta
 		
 		salir,perder = perder_partida(salir, perder)
-
-		for event in pygame.event.get(): #Eventos que hay https://www.pygame.org/docs/ref/event.html
-			if event.type == pygame.QUIT: #Salir cuando se le da al boton X de la pantalla
-				salir = True
-			if event.type == pygame.KEYDOWN: #Si se presiona una tecla
-				if event.key == pygame.K_LEFT: #Si se presiona la flecha izquierda
-					cabeza_x_cambio -= medida_bloque #La posición de la cabeza_x_cambio se reduce en 10
-					cabeza_y_cambio = 0 #Evitar que al cambiar la x la y no
-				elif event.key == pygame.K_RIGHT:
-					cabeza_x_cambio += medida_bloque
-					cabeza_y_cambio = 0
-				elif event.key == pygame.K_UP:
-					cabeza_y_cambio -= medida_bloque
-					cabeza_x_cambio = 0
-				elif event.key == pygame.K_DOWN:
-					cabeza_y_cambio += medida_bloque
-					cabeza_x_cambio = 0
-
-			
-			if cabeza_x >= ANCHURA_PANTALLA or cabeza_x < 0 or cabeza_y >= ALTURA_PANTALLA or cabeza_y < 0: #Si el cuadrado llega a alguno de los bordes se cierra el juego
-				perder = True
+		
+		movimiento_serpiente()
+		
+		if cabeza_x >= ANCHURA_PANTALLA or cabeza_x < 0 or cabeza_y >= ALTURA_PANTALLA or cabeza_y < 0: #Si el cuadrado llega a alguno de los bordes se cierra el juego
+			perder = True
 	
 		cabeza_x += cabeza_x_cambio #Cada vuelta al for sumara el cambio de posicion a cabeza_x asi se puede mantener la tecla pulsada y se mueve
 		cabeza_y += cabeza_y_cambio
 		
-		medida_manzana = 30
 		pantalla.fill(NEGRO) #Llena el fondo del color pasado
-		pygame.draw.rect(pantalla, ROJO, [manzanaX, manzanaY, medida_manzana, medida_manzana]) #Imprimir manzana
+		pygame.draw.rect(pantalla, ROJO, [manzana_x, manzana_y, medida_manzana, medida_manzana]) #Imprimir manzana
 		
 		cabeza_serpiente = []
 		cabeza_serpiente.append(cabeza_x)#Se mete en la lista la posicion de la cabeza x y la y
@@ -125,14 +171,15 @@ def main():
 				perder = True
 
 		serpiente(medida_bloque, lista_serpiente)
-		#pygame.draw.rect(pantalla, BLANCO, [400,100,10,10]) #Dibujar un rectangulo en la pantalla y se pone la posicion en los 2 primeros y la altura y anchura en los siguientes
-		#pantalla.fill(BLANCO, rect=[200,200,50,50]) #Hace lo mismo que el anterior 
+		
 		pygame.display.update() #Actualizar pantalla
 		
-		if cabeza_x == manzanaX and cabeza_y == manzanaY: #Comprobar si se ha comido la manzana
-			manzanaX = round(random.randrange(0,ANCHURA_PANTALLA-medida_bloque)/10.0)*10.0
-			manzanaY = round(random.randrange(0,ALTURA_PANTALLA-medida_bloque)/10.0)*10.0
-			longitud_serpiente += 1
+		#Mirar colisiones contra la manzana
+		if cabeza_x + medida_bloque > manzana_x and cabeza_x < manzana_x + medida_manzana:
+			if cabeza_y + medida_bloque > manzana_y and cabeza_y < manzana_y + medida_manzana:
+				manzana_x = round(random.randrange(0,ANCHURA_PANTALLA-medida_bloque))
+				manzana_y = round(random.randrange(0,ALTURA_PANTALLA-medida_bloque))
+				longitud_serpiente +=1
 
 		reloj.tick(FPS) #FPS para cambiar la velocidad del juego mejor no tocar FPS sino fuerzas que el bucle for se ejecute muchas veces por segundo y puede haber problema de rendimiento
 	
